@@ -1,0 +1,47 @@
+import math
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+fileName = "Data/" + input("What is the file name?")
+inputs = pd.read_csv(fileName)
+inputs = inputs[(inputs.critic_score > 3)]
+deltaTime = []
+timeSales = []
+
+inputs = inputs[(inputs.genre == 'Shooter') | (inputs.genre == 'Role-Playing')]
+#Shooter = 1, RPG = 0
+genreNum = []
+for i in range(inputs.shape[0]):
+    if inputs['genre'].values[i] == 'Shooter': genreNum.append(1)
+    else: genreNum.append(0)
+inputs["genre_num"] = np.array(genreNum)
+inputs = inputs[~(np.isnan(inputs["total_sales"].values))]
+inputs = inputs[~(np.isnan(inputs["critic_score"].values))]
+
+trainData = inputs.sample(frac = 0.8, random_state = 7)
+testData = inputs.drop(trainData.index)
+
+def normalize(values, dataset):
+    return (values-np.mean(dataset))/np.std(dataset)
+
+def neighbor(dataframe, testx, testy, k, testset):
+    distancesX = abs(normalize(dataframe['total_sales'].values, dataframe['total_sales'].values)-normalize(testx,dataframe['total_sales'].values))
+    distancesY = abs(normalize(dataframe['critic_score'].values, dataframe['critic_score'].values)-normalize(testy, dataframe['critic_score'].values))
+    dist = (distancesX**2 + distancesY**2)**0.5
+
+    np.argsort(dist)
+    bins = np.bincount(dataframe['genre_num'][np.argsort(dist)[0:k]])
+    return np.argmax(bins)
+
+data = trainData.reset_index()
+test = testData.reset_index()
+ans = []
+#print(test.shape[0])
+for i in range(test.shape[0]):
+    ans.append(neighbor(data, data['total_sales'].values[i], data['critic_score'].values[i], 2, test))
+print(ans)
+accurate = 0
+for i in range(test.shape[0]):
+    if ans[i] == test['genre_num'].values[i]: accurate += 1
+print(str(accurate/test.shape[0]))
