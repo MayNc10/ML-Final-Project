@@ -45,6 +45,7 @@ loss_sum = 0
 correct_count = 0
 
 tups = data['query_tup'].drop_duplicates().to_numpy()
+len_tups = len(tups)
 total_count = 0
 
 for (e_idx, tup) in enumerate(tups):
@@ -55,7 +56,7 @@ for (e_idx, tup) in enumerate(tups):
         correct_count += 1 if np.argmax(prob_list) == idx else 0
         total_count += 1
 
-    print(f"{e_idx}, {100 * e_idx / total_count}% done, {100 * correct_count / total_count}% correct")
+    print(f"{e_idx}, {100 * e_idx / len_tups}% done, {100 * correct_count / total_count}% correct")
     
     
 
