@@ -55,5 +55,5 @@ for (idx, console) in enumerate(consoles):
         
 avg_diff /= (len(consoles) * len(genres) * len(developers) )
 avg_diff_norm /= (len(consoles) * len(genres) * len(developers) )
-print(f"Average diff: {avg_diff}, normalized: {avg_diff_norm}")
+print(f"Average diff: {avg_diff}, normalized: {100 * avg_diff_norm}%") # the average norm is a percent
 
