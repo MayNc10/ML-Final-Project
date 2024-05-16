@@ -2,13 +2,24 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
-def query(console, genre, developer, data, publishers, publisher_dict):
-    games = data.loc[(data['console'] == console) & (data['genre'] == genre) & (data['developer'] == developer)]
-    publisher_counts = np.array([0 for _ in range(len(publishers))])
-    value_counts = games['publisher'].value_counts()
+def query(console, genre, developer, data, publishers):
+    prob_con = len(data.loc[data['console'] == console]) / len(data)
+    prob_gen = len(data.loc[data['genre'] == genre]) / len(data)
+    prob_dev = len(data.loc[data['developer'] == developer]) / len(data)
+    total_denom = prob_con * prob_gen * prob_dev
+    prob_list = []
     for publisher in publishers:
-        publisher_counts[publisher_dict[publisher]] = 0 if publisher not in value_counts else value_counts[publisher]
-    return publisher_counts
+        data_pub = data.loc[data['publisher'] == publisher]
+        prob_pub = len(data_pub) / len(data)
+        prob_pub_con = len(data_pub.loc[data_pub['console'] == console]) / len(data_pub)
+        prob_pub_gen = len(data_pub.loc[data_pub['genre'] == genre]) / len(data_pub)
+        prob_pub_dev = len(data_pub.loc[data_pub['developer'] == developer]) / len(data_pub)
+    
+        # watch for underflow
+        prob = (prob_pub * prob_pub_con * prob_pub_gen * prob_pub_dev) / total_denom
+        prob_list.append(prob)
+    return prob_list
+
 
 file = "Data/vgchartz-2024.csv"
 data = pd.read_csv(file)
@@ -28,32 +39,28 @@ consoles = data['console'].drop_duplicates().to_numpy()
 genres = data['genre'].drop_duplicates().to_numpy()
 developers = data['developer'].drop_duplicates().to_numpy()
 
-avg_diff = 0
-avg_diff_norm = 0
+data['query_tup'] = list(zip(data['console'], data['genre'], data['developer']))
 
-for (idx, console) in enumerate(consoles):
-    console_games = data.loc[data['console'] == console]
-    for (g_idx, genre) in enumerate(genres):
-        print(f"{100 * (idx * len(genres) + g_idx) / ( len(consoles) * len(genres)) :.3f}%")
+loss_sum = 0
+correct_count = 0
 
-        genre_games = console_games.loc[console_games['genre'] == genre]
-        for developer in developers:
-            #print(console, genre, developer)
+tups = data['query_tup'].drop_duplicates().to_numpy()
+total_count = 0
 
-            games = genre_games.loc[genre_games['developer'] == developer]
-            publisher_counts = np.array([0 for _ in range(len(publishers))])
-            value_counts = games['publisher'].value_counts().to_numpy()
-            if len(value_counts) == 0: continue
-            elif len(value_counts) == 1:  
-                avg_diff += value_counts[0]
-                avg_diff_norm += 1
-            else: 
-                value_counts_part = np.partition(value_counts, len(value_counts) - 2)
-                avg_diff += (value_counts_part[-1] - value_counts_part[-2]) 
-                avg_diff_norm += (value_counts_part[-1] - value_counts_part[-2]) / np.sum(value_counts)
+for (e_idx, tup) in enumerate(tups):
+    prob_list = query(tup[0], tup[1], tup[2], data, publishers)
+    for publisher in data.loc[(data['console'] == tup[0]) & (data['genre'] == tup[1]) & (data['developer'] == tup[2])]['publisher'].drop_duplicates():
+        idx = publisher_dict[publisher]
+        loss_sum += (1 - prob_list[idx])
+        correct_count += 1 if np.argmax(prob_list) == idx else 0
+        total_count += 1
+
+    print(f"{e_idx}, {100 * e_idx / total_count}% done, {100 * correct_count / total_count}% correct")
     
-        
-avg_diff /= (len(consoles) * len(genres) * len(developers) )
-avg_diff_norm /= (len(consoles) * len(genres) * len(developers) )
-print(f"Average diff: {avg_diff}, normalized: {100 * avg_diff_norm}%") # the average norm is a percent
+    
+
+print(f"Total loss: {loss_sum}, correct: {100 * correct_count / total_count}%")
+    
+    
+
 
