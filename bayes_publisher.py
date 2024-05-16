@@ -24,6 +24,9 @@ def query(console, genre, developer, data, publishers):
 file = "Data/vgchartz-2024.csv"
 data = pd.read_csv(file)
 
+limit = 1
+data = data.loc[data['total_sales'] > limit]
+
 # create publisher vector
 # first, get the publishers
 publishers = data['publisher'].drop_duplicates().to_numpy()
@@ -48,6 +51,8 @@ tups = data['query_tup'].drop_duplicates().to_numpy()
 len_tups = len(tups)
 total_count = 0
 
+print("Starting classifier")
+
 for (e_idx, tup) in enumerate(tups):
     prob_list = query(tup[0], tup[1], tup[2], data, publishers)
     for publisher in data.loc[(data['console'] == tup[0]) & (data['genre'] == tup[1]) & (data['developer'] == tup[2])]['publisher'].drop_duplicates():
@@ -57,8 +62,7 @@ for (e_idx, tup) in enumerate(tups):
         total_count += 1
 
     print(f"{e_idx}, {100 * e_idx / len_tups}% done, {100 * correct_count / total_count}% correct")
-    
-    
+
 
 print(f"Total loss: {loss_sum}, correct: {100 * correct_count / total_count}%")
     
